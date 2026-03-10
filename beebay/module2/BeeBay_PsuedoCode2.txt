@@ -1,0 +1,52 @@
+BEGIN
+{main - partial}
+
+    can_save ← TRUE
+
+    IF num_queens > 10 THEN
+        can_save ← FALSE
+    ELSEIF num_queens > 0 THEN
+        can_save ← check_queen_count(filename, num_queens)
+    ENDIF
+
+    IF can_save THEN
+        {write append code here}
+    ELSE
+        PRINT "Queen count exceeds daily limit"
+    ENDIF
+
+END
+
+
+BEGIN
+check_queen_count
+    INPUT filename
+
+    total_queens ← 0
+
+    IF file does not exist THEN
+        RETURN TRUE
+    ENDIF
+
+    OPEN filename FOR READING
+
+        READ and discard header row
+
+        FOR each record in the file
+
+            extract the number of queens from the record
+
+            total_queens ← total_queens + number_of_queens
+
+        ENDFOR
+
+    CLOSE filename
+
+    IF total_queens ≥ 10 THEN
+        RETURN FALSE
+    ELSE
+        RETURN TRUE
+    ENDIF
+
+END
+

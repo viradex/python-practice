@@ -1,35 +1,31 @@
 import csv
 from pathlib import Path
 
+CSV_FIELDS = (
+    "num_workers",
+    "num_queens",
+    "distance_km",
+    "bonus_code",
+    "final_cost",
+)
+CSV_FILENAME = "sales.csv"
+
 
 def create_csv():
-    with open("sales.csv", mode="w", newline="", encoding="utf-8") as file:
+    with open(CSV_FILENAME, mode="w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(
             file,
-            fieldnames=(
-                "num_workers",
-                "num_queens",
-                "distance_km",
-                "bonus_code",
-                "final_cost",
-            ),
+            fieldnames=CSV_FIELDS,
         )
         writer.writeheader()
 
 
 def save_bee(bee):
-    with open("sales.csv", mode="a", newline="", encoding="utf-8") as file:
+    with open(CSV_FILENAME, mode="a", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(
             file,
-            fieldnames=(
-                "num_workers",
-                "num_queens",
-                "distance_km",
-                "bonus_code",
-                "final_cost",
-            ),
+            fieldnames=CSV_FIELDS,
         )
-
         writer.writerow(
             {
                 "num_workers": str(bee["num_workers"]),
@@ -41,14 +37,21 @@ def save_bee(bee):
         )
 
 
-def check_queen_count():
+def check_queen_count(new_queens):
+    """
+    Check if adding new_queens would exceed the daily limit of 10.
+    Returns True if safe, False if limit exceeded.
+    """
     total_queens = 0
-    with open("sales.csv", mode="r", newline="", encoding="utf-8") as file:
+    if not Path(CSV_FILENAME).exists():
+        return True
+
+    with open(CSV_FILENAME, mode="r", newline="", encoding="utf-8") as file:
         reader = csv.DictReader(file)
         for row in reader:
             total_queens += int(row["num_queens"])
 
-    return total_queens
+    return (total_queens + new_queens) <= 10
 
 
 def get_valid_code():
@@ -58,8 +61,6 @@ def get_valid_code():
         bonus_code = (
             input("Bonus code (SALE / FREEPOST / HALFPOST or blank): ").upper().strip()
         )
-
-        print(bonus_code, valid_codes)
 
         if bonus_code not in valid_codes and bonus_code != "":
             print("Invalid value! Please try again.\n")
@@ -124,10 +125,8 @@ def calculate_post(distance_km):
 
 
 def main():
-    if not Path("sales.csv").exists():
+    if not Path(CSV_FILENAME).exists():
         create_csv()
-
-    current_queens_sold = check_queen_count()
 
     # --- constants ---
     worker_price = 0.05
@@ -143,11 +142,16 @@ def main():
     distance_km = get_valid_distance()
     bonus_code = get_valid_code()
 
-    if num_queens > 0 and current_queens_sold > 10:
-        print(
-            "\nNot enough queens in stock to satisfy the purchase. Assuming zero queens..."
-        )
-        num_queens = 0
+    # --- queen stock check ---
+    can_save = True
+    if num_queens > 10:
+        can_save = False
+    elif num_queens > 0:
+        can_save = check_queen_count(num_queens)
+
+    if not can_save:
+        print("Queen count exceeds daily limit")
+        return
 
     # --- processing ---
     worker_cost = num_workers * worker_price
@@ -186,13 +190,14 @@ def main():
     print(f"Discount:       ${discount_amount:.2f}")
     print(f"Final total:    ${final_cost:.2f}")
 
+    # --- save to CSV ---
     save_bee(
         {
             "num_workers": num_workers,
             "num_queens": num_queens,
-            "distance_km": distance_km,
+            "distance_km": round(distance_km),
             "bonus_code": bonus_code,
-            "final_cost": final_cost,
+            "final_cost": f"{final_cost:.2f}",  # always ends with a .00
         }
     )
 

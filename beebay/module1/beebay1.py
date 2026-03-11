@@ -9,8 +9,6 @@ def get_valid_code():
             input("Bonus code (SALE / FREEPOST / HALFPOST or blank): ").upper().strip()
         )
 
-        print(bonus_code, valid_codes)
-
         if bonus_code not in valid_codes and bonus_code != "":
             print("Invalid value! Please try again.\n")
         else:

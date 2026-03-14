@@ -1,15 +1,26 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 from pathlib import Path
 import csv
 
 
 class BeeBayAdmin(ttk.Frame):
-    def __init__(self, parent):
+    """
+    Admin interface for viewing BeeBay order data.
+
+    The program loads sales data from a CSV files and allows filtering
+    orders based on the amount of queen bee purchases and sorting by
+    cost or delivery distance.
+    """
+
+    def __init__(self, parent: tk.Tk):
+        """Initializes the BeeBayAdmin interface and sets up the UI."""
+
         super().__init__(parent, padding=20)
         self.parent = parent
         self.grid(row=0, column=0, sticky="NSEW")
 
+        # CSV headers and fields in table (excluding sale_id)
         self.fields = (
             "sale_id",
             "num_workers",
@@ -18,6 +29,8 @@ class BeeBayAdmin(ttk.Frame):
             "bonus_code",
             "final_cost",
         )
+
+        # Dropdown valid values
         self.filter_values = ("Orders with queens", "Orders with no queens")
         self.sort_values = ("Cost", "Distance")
 
@@ -98,9 +111,20 @@ class BeeBayAdmin(ttk.Frame):
         self.tree.configure(yscrollcommand=scrollbar.set)
         self.parent.bind("<Return>", self.load_results)
 
-    def load_csv(self):
+    def load_csv(self) -> list:
+        """
+        Load order data from the sales CSV file.
+
+        If the file does not exist, it is created with the correct column
+        headers before reading.
+
+        Returns:
+            list: A list of order dictionaries
+        """
+
         if not self.sales_csv.exists():
             with open(self.sales_csv, mode="w", newline="", encoding="utf-8") as file:
+                # Create CSV file with no data other than headers
                 writer = csv.DictWriter(
                     file,
                     fieldnames=self.fields,
@@ -111,6 +135,7 @@ class BeeBayAdmin(ttk.Frame):
         with open(self.sales_csv, "r", newline="", encoding="utf-8") as file:
             reader = csv.DictReader(file)
             for row in reader:
+                # Convert data to valid data types corresponding to the value and add to data
                 data.append(
                     {
                         "sale_id": int(row.get("sale_id", "")),
@@ -124,21 +149,55 @@ class BeeBayAdmin(ttk.Frame):
 
         return data
 
-    def filter_rows(self, data, queen_filter):
+    def filter_rows(self, data: list, queen_filter: bool) -> list:
+        """
+        Filter orders depending on whether they contain queen bees.
+
+        Parameters:
+            data (list): List of order dictionaries
+            queen_filter (bool): True if orders with queens should be shown
+
+        Returns:
+            list: Filtered order list
+        """
+
         if queen_filter:
+            # Return only orders that contain at least one queen
             return [row for row in data if row["num_queens"] > 0]
         else:
             return [row for row in data if row["num_queens"] == 0]
 
-    def sort_rows(self, data, sorter):
+    def sort_rows(self, data: list, sorter: str) -> list:
+        """
+        Sort orders based on either total cost or distance kilometers, in descending order.
+
+        Parameters:
+            data (list): List of order dictionaries
+            sorter (str): The sorting criteria, either 'cost' or 'distance'
+
+        Returns:
+            list: Sorted order list
+
+        Raises:
+            TypeError: If the sorting criteria does not match 'cost' or 'distance'
+        """
+
         if sorter == "cost":
             return sorted(data, key=lambda row: row["final_cost"], reverse=True)
         elif sorter == "distance":
             return sorted(data, key=lambda row: row["distance_km"], reverse=True)
         else:
+            # Raise error if an unsupported sorting criteria is provided
             raise TypeError(f"Sort option {sorter} does not exist")
 
-    def refresh_tree(self, data):
+    def refresh_tree(self, data: list):
+        """
+        Show data in the treeview by clearing all existing rows and re-adding them to UI.
+
+        Parameters:
+            data (list): List of order dictionaries
+        """
+
         for i in self.tree.get_children():
             self.tree.delete(i)
 
@@ -157,6 +216,8 @@ class BeeBayAdmin(ttk.Frame):
             )
 
     def load_results(self, _=None):
+        """Load, filter, sort, and display sales data in the treeview."""
+
         # Load file for reading
         data = self.load_csv()
 
@@ -173,6 +234,8 @@ class BeeBayAdmin(ttk.Frame):
 
 
 def main():
+    """Create the main window and run the BeeBayAdmin application."""
+
     root = tk.Tk()
     root.title("BeeBay Admin")
     root.geometry("760x420")

@@ -1,0 +1,44 @@
+BEGIN
+{BeeBay ordering module}
+
+    {variable setup}
+    worker_price ← 0.05
+    queen_price ← 15.00
+    queen_surcharge_rate ← 0.125
+
+    {input}
+    READ num_workers, num_queens, distance_km, bonus_code
+
+    {bee costs}
+    worker_cost ← num_workers × worker_price
+    queen_cost ← num_queens × queen_price
+    bee_subtotal ← worker_cost + queen_cost
+
+    {queen surcharge}
+    surcharge_amount ← 0
+    IF num_queens > 0 THEN
+        surcharge_amount ← bee_subtotal × queen_surcharge_rate
+    ENDIF
+
+    {postage}
+    postage_cost ← calculate_post(distance_km)
+
+    IF bonus_code = "FREEPOST" THEN
+        postage_cost ← 0
+    ELSEIF bonus_code = "HALFPOST" THEN
+        postage_cost ← postage_cost / 2
+    ENDIF
+
+    subtotal ← bee_subtotal + surcharge_amount + postage_cost
+
+    {discount}
+    discount_amount ← 0
+    IF bonus_code = "SALE" THEN
+        discount_amount ← subtotal × 0.10
+    ENDIF
+
+    final_cost ← subtotal − discount_amount
+
+    WRITE final_cost
+
+END

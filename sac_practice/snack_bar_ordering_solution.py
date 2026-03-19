@@ -1,24 +1,27 @@
 total_cost = 0
 
 while True:
-    item = input("Enter item (HOTDOG, BURGER, DRINK) or DONE: ").upper()
+    item = input("Enter item (HOTDOG, BURGER, DRINK, or DONE to exit): ").upper()
 
     if item == "DONE":
         break
 
     if item == "HOTDOG":
-        total_cost += 4.50
+        total_cost += 4.5
     elif item == "BURGER":
-        total_cost += 6.00
+        total_cost += 6
     elif item == "DRINK":
-        total_cost += 2.50
+        total_cost += 2.5
     else:
-        print("Invalid item")
+        print("Invalid item!\n")
+        continue
 
-discount = 0
+    print(f"Added {item}!\n")
+
 if total_cost > 20:
-    discount = total_cost * 0.10
+    discount = total_cost * 0.1
+else:
+    discount = 0
 
-final_total = total_cost - discount
-
-print("Final total:", round(final_total, 2))
+final_cost = total_cost - discount
+print(f"Final cost: {final_cost:.2f}")

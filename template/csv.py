@@ -24,6 +24,14 @@ def read_all():
         return list(reader)
 
 
+def ensure_file_exists():
+    """Create CSV file with header if it doesn't exist."""
+    if not FILE_PATH.exists():
+        with FILE_PATH.open("w", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=FIELDNAMES)
+            writer.writeheader()
+
+
 # =========================
 # GENERATE ID
 # =========================
@@ -46,15 +54,10 @@ def generate_id():
 
 def create_record(name, age):
     """Create record using append"""
-
-    file_exists = FILE_PATH.exists()
+    ensure_file_exists()
 
     with FILE_PATH.open("a", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=FIELDNAMES)
-
-        # write header only if file new
-        if not file_exists:
-            writer.writeheader()
 
         writer.writerow({"id": generate_id(), "name": name, "age": age})
 
@@ -77,6 +80,7 @@ def read_filtered(field, value):
 
 def update_record(record_id, updated_data):
     """Update record (overwrite method)"""
+    ensure_file_exists()
     data = read_all()
 
     for row in data:
@@ -93,6 +97,7 @@ def update_record(record_id, updated_data):
 
 def delete_record(record_id):
     """Delete record"""
+    ensure_file_exists()
     data = read_all()
 
     new_data = [row for row in data if row["id"] != str(record_id)]

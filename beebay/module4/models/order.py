@@ -36,6 +36,20 @@ class Order:
             surcharge_amount = 0
 
         postage_cost = self._calculate_post()
+        WORKER_PRICE = 0.05
+        QUEEN_PRICE = 15.00
+        QUEEN_SURCHARGE_RATE = 0.125
+
+        worker_cost = self.num_workers * WORKER_PRICE
+        queen_cost = self.num_queens * QUEEN_PRICE
+        bee_subtotal = worker_cost + queen_cost
+
+        if self.num_queens > 0:
+            surcharge_amount = bee_subtotal * QUEEN_SURCHARGE_RATE
+        else:
+            surcharge_amount = 0
+
+        postage_cost = self.calculate_post()
 
         if self.bonus_code == "FREEPOST":
             postage_cost = 0
@@ -65,3 +79,4 @@ class Order:
             "bonus_code": self.bonus_code,
             "final_cost": self.final_cost,
         }
+        pass

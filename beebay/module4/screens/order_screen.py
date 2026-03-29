@@ -5,7 +5,6 @@ from repos.order_repo import OrderRepo
 
 
 class OrderScreen(ttk.Frame):
-
     def __init__(self, parent, repo):
         super().__init__(parent, padding=20)
         self.parent = parent
@@ -24,7 +23,6 @@ class OrderScreen(ttk.Frame):
         self.create_widgets()
 
     def setup_grid(self):
-
         self.parent.columnconfigure(0, weight=1)
         self.parent.rowconfigure(0, weight=1)
 
@@ -97,6 +95,13 @@ class OrderScreen(ttk.Frame):
             bonus_code,
             sales_id=self.repo.get_next_id(),
         )
+        num_workers = int(self.num_workers_var.get().strip())
+        num_queens = int(self.num_queens_var.get().strip())
+        distance_km = int(self.distance_km_var.get().strip())
+        bonus_code = self.bonus_code_var.get().strip()
+
+        # create order object from validated values
+        self.order = Order(num_workers, num_queens, distance_km, bonus_code)
 
         # calculate values
         self.order.calculate()

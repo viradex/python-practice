@@ -4,7 +4,6 @@ from datetime import date
 from screens.order_screen import OrderScreen
 from repos.order_repo import OrderRepo
 
-
 class App:
     def __init__(self):
         self.root = tk.Tk()
@@ -13,8 +12,8 @@ class App:
 
         today = date.today()
         base_dir = Path(__file__).resolve().parent
-        data_file = base_dir / "data" / f"{today}_sales.csv"
-
+        data_file = base_dir / "data" / f"{today}sales.csv"
+        
         self.order_repo = OrderRepo(data_file)
         OrderScreen(self.root, self.order_repo)
 

@@ -88,16 +88,16 @@ class BookingsScreen(ttk.Frame):
         ticket_tier = self.ticket_tier_var.get().strip()
         num_adults = self.num_adults_var.get().strip()
         num_children = self.num_children_var.get().strip()
-        # total_cost = self.total_cost_var.get().strip()
+        total_cost = self.total_cost_var.get().strip()
 
-        return event_date, ticket_tier, num_adults, num_children
+        return event_date, ticket_tier, num_adults, num_children, total_cost
 
     def validate_inputs(self):
-        event_date, ticket_tier, num_adults, num_children = self.get_inputs()
+        event_date, ticket_tier, num_adults, num_children, _ = self.get_inputs()
 
         if not all((event_date, ticket_tier, num_adults, num_children)):
             messagebox.showerror(
-                "Invalid Value(s)",
+                "Empty Value(s)",
                 "Please ensure all values are filled in before submitting.",
             )
             return False

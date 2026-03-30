@@ -3,6 +3,10 @@ from dataclasses import dataclass
 
 @dataclass
 class Order:
+    WORKER_PRICE = 0.05
+    QUEEN_PRICE = 15.00
+    QUEEN_SURCHARGE_RATE = 0.125
+
     num_workers: int
     num_queens: int
     distance_km: float
@@ -21,31 +25,12 @@ class Order:
     def calculate(self):
         # TODO: implement the calculation logic from Module 1
         # does not need to return a value, it would update the attributes.
-
-        worker_price = 0.05
-        queen_price = 15.00
-        queen_surcharge_rate = 0.125
-
-        worker_cost = self.num_workers * worker_price
-        queen_cost = self.num_queens * queen_price
+        worker_cost = self.num_workers * self.WORKER_PRICE
+        queen_cost = self.num_queens * self.QUEEN_PRICE
         bee_subtotal = worker_cost + queen_cost
 
         if self.num_queens > 0:
-            surcharge_amount = bee_subtotal * queen_surcharge_rate
-        else:
-            surcharge_amount = 0
-
-        postage_cost = self._calculate_post()
-        WORKER_PRICE = 0.05
-        QUEEN_PRICE = 15.00
-        QUEEN_SURCHARGE_RATE = 0.125
-
-        worker_cost = self.num_workers * WORKER_PRICE
-        queen_cost = self.num_queens * QUEEN_PRICE
-        bee_subtotal = worker_cost + queen_cost
-
-        if self.num_queens > 0:
-            surcharge_amount = bee_subtotal * QUEEN_SURCHARGE_RATE
+            surcharge_amount = bee_subtotal * self.QUEEN_SURCHARGE_RATE
         else:
             surcharge_amount = 0
 

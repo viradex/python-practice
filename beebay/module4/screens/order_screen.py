@@ -30,7 +30,6 @@ class OrderScreen(ttk.Frame):
         self.columnconfigure(1, weight=1)
 
     def create_widgets(self):
-
         ttk.Label(self, text="BeeBay Order Entry", font=("Arial", 16, "bold")).grid(
             row=0, column=0, columnspan=2, sticky="w", pady=(0, 15)
         )
@@ -80,12 +79,43 @@ class OrderScreen(ttk.Frame):
             row=6, column=1, sticky="e", pady=(12, 0)
         )
 
+    def validate_inputs(self):
+        num_workers = self.num_workers_var.get().strip()
+        num_queens = self.num_queens_var.get().strip()
+        distance_km = self.distance_km_var.get().strip()
+        bonus_code = self.bonus_code_var.get().strip()
+
+        if not num_workers or not num_queens or not distance_km:
+            messagebox.showerror("", "no values given")
+            return False
+
+        try:
+            num_workers = int(num_workers)
+            num_queens = int(num_queens)
+            distance_km = float(distance_km)
+        except ValueError:
+            messagebox.showerror("", "not a valid num")
+            return False
+
+        if num_workers < 0 or num_queens < 0 or distance_km < 0:
+            messagebox.showerror("", "too low")
+            return False
+
+        if bonus_code not in ("", "SALE", "FREEPOST", "HALFPOST"):
+            messagebox.showerror("", "invalid bonus code")
+            return False
+
+        return True
+
     def calculate(self):
         # validate inputs
-        num_workers = int(self.num_workers_var.get())
-        num_queens = int(self.num_queens_var.get())
-        distance_km = float(self.distance_km_var.get())
-        bonus_code = self.bonus_code_var.get()
+        num_workers = self.num_workers_var.get().strip()
+        num_queens = self.num_queens_var.get().strip()
+        distance_km = self.distance_km_var.get().strip()
+        bonus_code = self.bonus_code_var.get().strip()
+
+        if not self.validate_inputs():
+            return
 
         # create order object from validated values
         self.order = Order(
@@ -95,13 +125,6 @@ class OrderScreen(ttk.Frame):
             bonus_code,
             sales_id=self.repo.get_next_id(),
         )
-        num_workers = int(self.num_workers_var.get().strip())
-        num_queens = int(self.num_queens_var.get().strip())
-        distance_km = int(self.distance_km_var.get().strip())
-        bonus_code = self.bonus_code_var.get().strip()
-
-        # create order object from validated values
-        self.order = Order(num_workers, num_queens, distance_km, bonus_code)
 
         # calculate values
         self.order.calculate()

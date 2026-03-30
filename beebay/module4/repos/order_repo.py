@@ -1,10 +1,16 @@
 import csv
+from pathlib import Path
+from datetime import date
+
 from models.order import Order
 
 
 class OrderRepo:
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self):
+        today = date.today()
+        base_dir = Path(__file__).resolve().parent.parent
+        self.filename = base_dir / "data" / f"{today}_sales.csv"
+
         self.fields = [
             "sales_id",
             "num_workers",
@@ -37,17 +43,18 @@ class OrderRepo:
         if not self._ensure_csv_exists():
             return 1
 
-        ids = []
+        max_id = 0
         with open(self.filename, "r", newline="", encoding="utf-8") as file:
             reader = csv.DictReader(file)
             for row in reader:
                 if not row.get("sales_id", "").isdigit():
                     continue
 
-                ids.append(int(row.get("sales_id", 0)))
+                current_id = int(row.get("sales_id", 0))
+                if current_id > max_id:
+                    max_id = current_id
 
-        ids.sort()
-        return ids[-1] + 1 if ids else 1
+        return max_id + 1
 
     def check_queen_count(self, num_queens):
         # TODO:

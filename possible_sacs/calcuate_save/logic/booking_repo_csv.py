@@ -19,18 +19,6 @@ class BookingRepoCSV:
             "date_entered",
         ]
 
-    @staticmethod
-    def get_next_id(data):
-        if len(data) == 0:
-            return 1
-
-        max_id = 0
-        for value in data:
-            if value.id > max_id:
-                max_id = value.id
-
-        return max_id + 1
-
     def _ensure_data_dir(self):
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -51,7 +39,7 @@ class BookingRepoCSV:
         with open(self.csv_path, "r", newline="", encoding="utf-8") as file:
             reader = csv.DictReader(file)
             for row in reader:
-                if row.get("id", "").isdigit() is False:
+                if row.get("booking_id", "").isdigit() is False:
                     continue
 
                 # booking_id,event_date,ticket_tier,num_adults,num_children,total_cost,date_entered
@@ -80,9 +68,20 @@ class BookingRepoCSV:
             for booking in bookings:
                 writer.writerow(booking.to_csv_row())
 
-    def add(self, bookings, booking):
+    def save(self, bookings, booking):
         bookings.append(booking)
 
-        with open(self.filename, "a", newline="", encoding="utf-8") as file:
+        with open(self.csv_path, "a", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(file, fieldnames=self.fields)
             writer.writerow(booking.to_csv_row())
+
+    def get_next_id(self):
+        bookings = self.load_all()
+        if not bookings:
+            return 1
+
+        return max(b.booking_id for b in bookings) + 1
+
+    def create_booking(self, event_date, tier, adults, children):
+        booking_id = self.get_next_id()
+        return Booking.create(booking_id, event_date, tier, adults, children)

@@ -19,6 +19,15 @@ class Booking:
     total_cost: float = 0
     date_entered: str = ""
 
+    @classmethod
+    def create(cls, booking_id, event_date, tier, adults, children):
+        booking = cls(booking_id, event_date, tier, adults, children)
+
+        booking.calculate_total_cost()
+        booking.set_date_entered()
+
+        return booking
+
     def calculate_total_cost(self):
         adult_price = self.PRICES[self.ticket_tier.lower()]["adult"]
         child_price = self.PRICES[self.ticket_tier.lower()]["child"]
@@ -40,7 +49,7 @@ class Booking:
         return {
             "booking_id": str(self.booking_id),
             "event_date": self.event_date,
-            "ticket_tier": self.ticket_tier,
+            "ticket_tier": self.ticket_tier.lower(),
             "num_adults": str(self.num_adults),
             "num_children": str(self.num_children),
             "total_cost": str(self.total_cost),

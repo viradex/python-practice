@@ -12,6 +12,7 @@ class BookingsScreen(ttk.Frame):
         self.parent = parent
         self.repo = repo
         self.booking = None
+        self.all_bookings = self.repo.load_all()
 
         self.VALID_TICKET_TIERS = ("Standard", "Premium", "VIP")
 
@@ -95,6 +96,13 @@ class BookingsScreen(ttk.Frame):
 
         return event_date, ticket_tier, num_adults, num_children, total_cost
 
+    def reset_inputs(self):
+        self.event_date_var.set("")
+        self.ticket_tier_var.set(self.VALID_TICKET_TIERS[0])
+        self.num_adults_var.set("")
+        self.num_children_var.set("")
+        self.total_cost_var.set("")
+
     def validate_inputs(self):
         event_date, ticket_tier, num_adults, num_children, _ = self.get_inputs()
 
@@ -107,7 +115,7 @@ class BookingsScreen(ttk.Frame):
         elif not self._is_valid_date(event_date):
             messagebox.showerror(
                 "Invalid Date",
-                f"The date must be in a valid format (YYYY-MM-DD), but received {event_date}.",
+                "The date must be in a valid format (YYYY-MM-DD) and not be a past date.",
             )
             return False
         elif ticket_tier not in self.VALID_TICKET_TIERS:
@@ -145,22 +153,36 @@ class BookingsScreen(ttk.Frame):
 
     def _is_valid_date(self, date_str):
         try:
-            # Not using .fromisoformat() since that format allows time
-            datetime.date.strptime(date_str, "%Y-%m-%d")
-            return True
+            date = datetime.date.fromisoformat(date_str)
+            return date >= datetime.date.today()
         except ValueError:
+            # If parsing date fails, it means it was invalid
             return False
 
     def calculate(self):
-        self.validate_inputs()
+        if not self.validate_inputs():
+            return False
 
-        self.booking = Booking()
+        event_date, ticket_tier, num_adults, num_children, _ = self.get_inputs()
+
+        self.booking = self.repo.create_booking(
+            event_date, ticket_tier, int(num_adults), int(num_children)
+        )
+
+        self.total_cost_var.set(self.booking.total_cost)
+        return True
 
     def save(self):
         if not self.booking:
-            messagebox.showerror(
-                "Final Cost Not Available",
-                "The final cost has not yet been calculated. Please press the Calculate button before saving data.",
-            )
-        else:
-            self.repo.save(self.booking)
+            validation_success = self.calculate()
+            if validation_success is False:
+                return
+
+        self.repo.save(self.all_bookings, self.booking)
+        self.all_bookings = self.repo.load_all()
+
+        messagebox.showinfo(
+            "Saved Data", f"Saved booking data with ID {self.booking.booking_id}."
+        )
+        self.reset_inputs()
+        self.booking = None

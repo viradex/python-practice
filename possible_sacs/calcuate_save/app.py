@@ -10,8 +10,8 @@ class App:
         self.root.title("Module 4 Practice SAC")
         self.root.geometry("700x420")
 
-        self.order_repo = BookingRepoCSV()
-        BookingsScreen(self.root, self.order_repo)
+        self.booking_repo = BookingRepoCSV()
+        BookingsScreen(self.root, self.booking_repo)
 
     def run(self):
         self.root.mainloop()

@@ -35,3 +35,14 @@ class Booking:
     def set_date_entered(self):
         self.date_entered = datetime.now().strftime("%Y-%m-%d")
         return self.date_entered
+
+    def to_csv_row(self):
+        return {
+            "booking_id": str(self.booking_id),
+            "event_date": self.event_date,
+            "ticket_tier": self.ticket_tier,
+            "num_adults": str(self.num_adults),
+            "num_children": str(self.num_children),
+            "total_cost": str(self.total_cost),
+            "date_entered": self.date_entered,
+        }

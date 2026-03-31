@@ -2,13 +2,16 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import datetime
 
+from models.booking import Booking
+from logic.booking_repo_csv import BookingRepoCSV
+
 
 class BookingsScreen(ttk.Frame):
-    def __init__(self, parent, repo):
+    def __init__(self, parent, repo: BookingRepoCSV):
         super().__init__(parent, padding=20)
         self.parent = parent
         self.repo = repo
-        self.order = None
+        self.booking = None
 
         self.VALID_TICKET_TIERS = ("Standard", "Premium", "VIP")
 
@@ -151,13 +154,13 @@ class BookingsScreen(ttk.Frame):
     def calculate(self):
         self.validate_inputs()
 
+        self.booking = Booking()
+
     def save(self):
-        # TODO
-        # call self.repo.save(self.order)
-        if not self.order:
+        if not self.booking:
             messagebox.showerror(
                 "Final Cost Not Available",
                 "The final cost has not yet been calculated. Please press the Calculate button before saving data.",
             )
         else:
-            self.repo.save(self.order)
+            self.repo.save(self.booking)

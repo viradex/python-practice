@@ -1,0 +1,88 @@
+import csv
+from pathlib import Path
+
+from models.booking import Booking
+
+
+class BookingRepoCSV:
+    def __init__(self):
+        self.base_dir = Path(__file__).resolve().parent.parent
+        self.data_dir = self.base_dir / "data"
+        self.csv_path = self.data_dir / "bookings.csv"
+        self.fields = [
+            "booking_id",
+            "event_date",
+            "ticket_tier",
+            "num_adults",
+            "num_children",
+            "total_cost",
+            "date_entered",
+        ]
+
+    @staticmethod
+    def get_next_id(data):
+        if len(data) == 0:
+            return 1
+
+        max_id = 0
+        for value in data:
+            if value.id > max_id:
+                max_id = value.id
+
+        return max_id + 1
+
+    def _ensure_data_dir(self):
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+
+    def _ensure_csv_exists(self):
+        self._ensure_data_dir()
+
+        if self.csv_path.exists() is True:
+            return
+
+        with open(self.csv_path, "w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=self.fields)
+            writer.writeheader()
+
+    def load_all(self):
+        self._ensure_csv_exists()
+
+        bookings = []
+        with open(self.csv_path, "r", newline="", encoding="utf-8") as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                if row.get("id", "").isdigit() is False:
+                    continue
+
+                # booking_id,event_date,ticket_tier,num_adults,num_children,total_cost,date_entered
+                bookings.append(
+                    Booking(
+                        booking_id=int(row.get("booking_id", 0)),
+                        event_date=row.get("event_date", ""),
+                        ticket_tier=row.get("ticket_tier", "Standard"),
+                        num_adults=int(row.get("num_adults", 0)),
+                        num_children=int(row.get("num_children", 0)),
+                        total_cost=float(row.get("total_cost", 0)),
+                        date_entered=row.get("date_entered", ""),
+                    )
+                )
+
+        bookings.sort(key=lambda booking: booking.booking_id)
+        return bookings
+
+    def save_all(self, bookings: list[Booking]):
+        self._ensure_csv_exists()
+
+        with open(self.csv_path, "w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=self.fields)
+            writer.writeheader()
+
+            for booking in bookings:
+                writer.writerow(booking.to_csv_row())
+
+    def add(self, bookings, booking):
+        bookings.append(booking)
+
+        with open(self.filename, "a", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=self.fields)
+            writer.writerow(booking.to_csv_row())

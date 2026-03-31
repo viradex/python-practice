@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from pathlib import Path
+import csv
 
 
 class BeeBayAdmin(ttk.Frame):
@@ -11,7 +12,7 @@ class BeeBayAdmin(ttk.Frame):
         self.grid(row=0, column=0, sticky="nsew")
 
         self.filter_var = tk.StringVar(value="Orders with queens")
-        self.sort_var = tk.StringVar(value="total_cost")
+        self.sort_var = tk.StringVar(value="final_cost")
 
         self.setup_grid()
         self.create_widgets()
@@ -51,11 +52,11 @@ class BeeBayAdmin(ttk.Frame):
             self,
             textvariable=self.sort_var,
             state="readonly",
-            values=["total_cost", "distance_km"]
+            values=["final_cost", "distance_km"]
         )
         cbo_sort.grid(row=2, column=1, sticky="ew", pady=5)
 
-        btn_go = ttk.Button(self, text="Load Results", command=lambda: self.load_results())
+        btn_go = ttk.Button(self, text="Load Results", command=self.load_results)
         btn_go.grid(row=2, column=2, sticky="w", padx=(10, 0), pady=5)
 
         columns = (
@@ -99,13 +100,47 @@ class BeeBayAdmin(ttk.Frame):
     
     def load_results(self):
         #ToDo: implement search and filter code
-        # 1. load file for reading
-        # 2. add matching rows to a list
-        # 3. sort matching list
-        # 4. load list to treeview
-        #  - do you need multiple functions? 
-        pass
+        matches = []
+        queens_match = (self.filter_var.get() == "Orders with queens")
+        sort_by = self.sort_var.get()
 
+        # 1. load file for reading
+        with open(self.sales_csv, newline="", encoding="utf-8") as sales_file:
+        # 2. add matching rows to a list
+            for row in csv.DictReader(sales_file):
+                
+                if queens_match:
+                    if(int(row["num_queens"])) > 0:
+                        matches.append(row)
+                else:
+                    if(int(row["num_queens"])) == 0:
+                        matches.append(row)
+
+                #OR - there are other ways to code this
+                """
+                has_queens = int(row["num_queens"]) > 0
+                if queens_match == has_queens:
+                    matches.append(row)
+                """
+
+        # 3. sort matching list
+        # sorted_matches = sorted(matches, key=lambda item_to_sort: float(item_to_sort[sort_by]))
+
+        #OR - clearer
+        def sort_key(row):
+            return float(row[sort_by]) #sort_by comes directly from the input
+        sorted_matches = sorted(matches, key=sort_key)
+
+        # 4. load list to treeview
+        #clear treeview first
+        for i in self.tree.get_children(): 
+            self.tree.delete(i)
+
+        for row in sorted_matches:
+            self.tree.insert("", tk.END, values=list(row.values()))
+
+        #  - do you need multiple functions? 
+        # - each of these could be a function - pass in the parameters, then return the list
 
 def main():
 

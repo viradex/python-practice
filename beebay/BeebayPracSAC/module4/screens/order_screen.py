@@ -13,9 +13,9 @@ class OrderScreen(ttk.Frame):
 
         self.grid(row=0, column=0, sticky="nsew")
 
-        self.num_workers_var = tk.StringVar()
-        self.num_queens_var = tk.StringVar()
-        self.distance_km_var = tk.StringVar()
+        self.num_workers_var = tk.IntVar()
+        self.num_queens_var = tk.IntVar()
+        self.distance_km_var = tk.DoubleVar()
         self.bonus_code_var = tk.StringVar()
         self.final_cost_var = tk.StringVar()
 
@@ -85,10 +85,10 @@ class OrderScreen(ttk.Frame):
 
     def calculate(self):
         #validate inputs
-        num_workers = self.num_workers_var
-        num_queens = self.num_queens_var
-        distance_km = self.distance_km_var
-        bonus_code = self.bonus_code_var
+        num_workers = self.num_workers_var.get()
+        num_queens = self.num_queens_var.get()
+        distance_km = self.distance_km_var.get()
+        bonus_code = self.bonus_code_var.get()
 
         #create order object from validated values
         self.order = Order(num_workers, num_queens, distance_km, bonus_code)
@@ -97,12 +97,19 @@ class OrderScreen(ttk.Frame):
         self.order.calculate()
         
         #update total on screen
-        self.final_cost_var.set(self.order.final_cost)
+        self.final_cost_var.set(f"{self.order.final_cost:.2f}")
 
     def save(self):
         # TODO
         # call self.repo.save(self.order)    
-        pass
+        if(self.repo.check_queen_count(self.num_queens_var.get())):
+            if(self.repo.save(self.order)):
+                messagebox.showinfo("Save success", "Yes Order saved")
+            else:
+                messagebox.showerror("Save error", "Error saving Order")
+        else:
+            messagebox.showwarning("Save error", "No can do - too many Queens today")
+            
 
 
 def main():

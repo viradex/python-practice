@@ -92,9 +92,9 @@ class BookingsScreen(ttk.Frame):
         ticket_tier = self.ticket_tier_var.get().strip()
         num_adults = self.num_adults_var.get().strip()
         num_children = self.num_children_var.get().strip()
-        total_cost = self.total_cost_var.get().strip()
+        # total_cost = self.total_cost_var.get().strip()
 
-        return event_date, ticket_tier, num_adults, num_children, total_cost
+        return event_date, ticket_tier, num_adults, num_children
 
     def reset_inputs(self):
         self.event_date_var.set("")
@@ -104,7 +104,7 @@ class BookingsScreen(ttk.Frame):
         self.total_cost_var.set("")
 
     def validate_inputs(self):
-        event_date, ticket_tier, num_adults, num_children, _ = self.get_inputs()
+        event_date, ticket_tier, num_adults, num_children = self.get_inputs()
 
         if not all((event_date, ticket_tier, num_adults, num_children)):
             messagebox.showerror(
@@ -163,7 +163,7 @@ class BookingsScreen(ttk.Frame):
         if not self.validate_inputs():
             return False
 
-        event_date, ticket_tier, num_adults, num_children, _ = self.get_inputs()
+        event_date, ticket_tier, num_adults, num_children = self.get_inputs()
 
         self.booking = self.repo.create_booking(
             event_date, ticket_tier, int(num_adults), int(num_children)

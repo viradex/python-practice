@@ -1,3 +1,21 @@
+"""
+Description:
+Defines the Booking data model used to represent a ticket booking.
+Includes logic for calculating total cost, applying discounts,
+and converting booking data into CSV row format.
+
+Classes:
+Booking - Represents a single booking record
+
+Dependencies:
+dataclasses
+datetime
+
+File: booking.py
+Author: Arnav Thorat
+Date: 2026-04-01
+"""
+
 from dataclasses import dataclass
 from datetime import datetime
 

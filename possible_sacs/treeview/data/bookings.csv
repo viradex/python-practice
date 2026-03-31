@@ -1,0 +1,8 @@
+booking_id,event_date,ticket_tier,num_adults,num_children,total_cost,date_entered
+1,2025-06-11,standard,22,22,1287.0,2026-03-31
+2,2025-01-01,standard,2,3,139.5,2026-03-31
+3,2025-06-11,standard,2,2,130.0,2026-03-31
+4,2020-05-11,standard,145,34,5985.0,2026-03-31
+6,2026-05-11,standard,1,2,90.0,2026-03-31
+8,2026-06-30,standard,31,20,1566.0,2026-03-31
+9,2027-01-12,standard,24,120,3564.0,2026-03-31

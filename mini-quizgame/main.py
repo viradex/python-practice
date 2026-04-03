@@ -2,13 +2,25 @@ from server.game_server import GameServer
 from client.game_client import GameClient
 from utils.json_loader import JSONLoader
 
+# temp
+import socket
+from common.protocol import send, recv
+
 
 def host_game():
-    pass
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(("0.0.0.0", 5555))
+    server.listen()
+
+    client, _ = server.accept()
+    print(recv(client))
 
 
 def join_game():
-    pass
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect(("127.0.0.1", 5555))
+
+    send(client, {"type": "answer", "answer": 2})
 
 
 def main():

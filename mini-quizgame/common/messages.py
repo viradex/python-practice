@@ -5,6 +5,7 @@ class MessageType(str, Enum):
     """Defines all valid message types that can be sent/received between the client and the server."""
 
     JOIN = "join"
+    KICK = "kick"
     PIN = "pin"
     PLAYER_LIST = "player_list"
     START = "start"

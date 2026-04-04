@@ -33,11 +33,16 @@ class GameClient:
 
         if msg_type == MessageType.PLAYER_LIST:
             self.handle_player_list(msg)
+        if msg_type == MessageType.KICK:
+            self.handle_kick(msg)
 
     def handle_player_list(self, msg):
         print("\nPlayers")
         for player in msg["players"]:
             print(f"- {player}")
+
+    def handle_kick(self, msg):
+        print(f"\nConnection Lost\nReason: {msg["reason"]}")
 
     def send_join(self):
         join_data = {"type": MessageType.JOIN, "nickname": self.nickname}

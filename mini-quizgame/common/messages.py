@@ -12,4 +12,5 @@ class MessageType(str, Enum):
     OTHER_KICK = "other_kick"
     OTHER_LEAVE = "other_leave"
 
+    PLAYER_LIST = "player_list"
     SHUT_DOWN = "shut_down"

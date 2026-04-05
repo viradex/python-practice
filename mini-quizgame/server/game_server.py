@@ -1,5 +1,5 @@
 import socket
-import os
+import sys
 import threading
 
 from server.game_state import GameState
@@ -40,6 +40,10 @@ class GameServer:
         del self.client_names[client]
         del self.state.players[nickname]
 
+    def _get_ip_address(self):
+        hostname = socket.gethostname()
+        return socket.gethostbyname(hostname)
+
     def start(self) -> None:
         """
         Start the server, making it available on the network and listen for incoming requests (such as from clients).
@@ -57,7 +61,7 @@ class GameServer:
         self.running = True
         self.server.settimeout(1.0)
 
-        ServerUI.start_server(self.host, self.port)
+        ServerUI.start_server(self.host, self.port, self._get_ip_address())
 
     def accept_clients(self) -> None:
         """
@@ -157,7 +161,7 @@ class GameServer:
 
     def handle_message(self, client: socket.socket, msg: dict) -> None:
         """
-        Handle messages from the server appropriately by matching the `type` key in the dictionary
+        Handle messages from the clients appropriately by matching the `type` key in the dictionary
         from the message to any valid value in `MessageType`.
 
         Parameters:
@@ -170,6 +174,8 @@ class GameServer:
             self.handle_join(client, msg)
         elif msg_type == MessageType.LEAVE:
             self.handle_leave(client, msg)
+        elif msg_type == MessageType.PLAYER_LIST:
+            self.handle_player_list(client, msg)
 
     def handle_join(self, client: socket.socket, msg: dict[str, str]) -> None:
         """
@@ -227,6 +233,15 @@ class GameServer:
         self.broadcast({"type": MessageType.OTHER_LEAVE, "nickname": name})
 
         self._remove_client(client, name)
+
+    def handle_player_list(self, client, msg):
+        send(
+            client,
+            {
+                "type": MessageType.PLAYER_LIST,
+                "players": list(self.state.players.keys()),
+            },
+        )
 
     def broadcast(self, msg: dict) -> None:
         """
@@ -286,4 +301,4 @@ class GameServer:
                 pass
 
         ServerUI.server_shutdown()
-        os._exit(0)
+        sys.exit(0)

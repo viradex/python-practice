@@ -1,3 +1,4 @@
+import ipaddress
 from common.common_ui import CommonUI
 
 
@@ -5,6 +6,20 @@ class ClientUI(CommonUI):
     @staticmethod
     def join_server(host, port):
         print(f"Joined server on {host} on port {port}\n")
+
+    @staticmethod
+    def get_ip_address(default="127.0.0.1"):
+        while True:
+            ip = input(f"Enter IP address (or blank for {default}): ")
+
+            if not ip:
+                ip = default
+
+            try:
+                ipaddress.ip_address(ip)
+                return ip
+            except ValueError:
+                print("Invalid address\n")
 
     @staticmethod
     def get_nickname():

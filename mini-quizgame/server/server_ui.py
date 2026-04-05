@@ -3,8 +3,9 @@ from common.common_ui import CommonUI
 
 class ServerUI(CommonUI):
     @staticmethod
-    def start_server(host, port):
-        print(f"Started server, listening on {host} on port {port}\n")
+    def start_server(host, port, ip):
+        print(f"\nStarted server, listening on {host} on port {port}")
+        print(f"Clients can join by connecting to: {ip}\n")
 
     @staticmethod
     def client_connected(ip, port):

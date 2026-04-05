@@ -1,5 +1,5 @@
 import socket
-import os
+import sys
 import threading
 
 from common.protocol import send, recv
@@ -8,19 +8,35 @@ from client.client_ui import ClientUI
 
 
 class GameClient:
-    def __init__(self, host, port):
-        self.host = host
+    def __init__(self, port):
         self.port = port
+        self.host = None
 
         self.nickname = None
         self.client = None
+
+        self.awaiting_player_list = False
+
+    def get_ip_address(self):
+        self.host = ClientUI.get_ip_address()
 
     def get_nickname(self):
         self.nickname = ClientUI.get_nickname()
 
     def connect(self):
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client.connect((self.host, self.port))
+        if self.host is None or self.nickname is None:
+            raise ValueError(
+                "host and nickname must have values, call get_ip_address() and get_nickname() before connecting"
+            )
+
+        try:
+            self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.client.connect((self.host, self.port))
+        except ConnectionRefusedError:
+            print(
+                f"\nThe server could not be found (tried connecting to {self.host}:{self.port} but the connection was refused).\n"
+            )
+            sys.exit(1)
 
         ClientUI.join_server(self.host, self.port)
         self.send_join()
@@ -58,7 +74,7 @@ class GameClient:
             ClientUI.show_help()
 
         elif command == "list":
-            print("Command disabled\n")
+            self.ask_player_list()
 
         elif command == "quit":
             self.leave_server()
@@ -80,6 +96,8 @@ class GameClient:
             self.handle_other_kick(msg)
         elif msg_type == MessageType.OTHER_LEAVE:
             self.handle_other_leave(msg)
+        elif msg_type == MessageType.PLAYER_LIST:
+            self.handle_player_list(msg)
         elif msg_type == MessageType.SHUT_DOWN:
             self.handle_shut_down(msg)
 
@@ -92,11 +110,22 @@ class GameClient:
     def handle_other_kick(self, msg):
         ClientUI.player_kicked(msg["nickname"])
 
+    def handle_other_leave(self, msg):
+        if msg["nickname"] != self.nickname:
+            ClientUI.player_left(msg["nickname"])
+
+    def handle_player_list(self, msg):
+        if self.awaiting_player_list:
+            ClientUI.show_players(msg["players"])
+
+        self.awaiting_player_list = False
+
     def handle_shut_down(self, msg):
         ClientUI.connection_lost(msg["reason"])
 
-    def handle_other_leave(self, msg):
-        ClientUI.player_left(msg["nickname"])
+    def ask_player_list(self):
+        self.awaiting_player_list = True
+        send(self.client, {"type": MessageType.PLAYER_LIST})
 
     def send_join(self):
         send(self.client, {"type": MessageType.JOIN, "nickname": self.nickname})
@@ -108,4 +137,4 @@ class GameClient:
         send(self.client, {"type": MessageType.LEAVE, "nickname": self.nickname})
 
         ClientUI.player_left(self.nickname)
-        os._exit(0)
+        sys.exit(0)

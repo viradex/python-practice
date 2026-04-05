@@ -4,7 +4,6 @@ from utils.json_loader import JSONLoader
 
 # TODO maybe temporary consts?
 SERVER_IP = "0.0.0.0"
-CLIENT_IP = "127.0.0.1"
 PORT = 5555
 
 
@@ -22,9 +21,10 @@ def host_game() -> None:
 def join_game() -> None:
     """Start the program as a client to join a server."""
 
-    client = GameClient(CLIENT_IP, PORT)
+    client = GameClient(PORT)
 
     # TODO in GameClient init?
+    client.get_ip_address()
     client.get_nickname()
     client.connect()
 

@@ -6,11 +6,10 @@ class MessageType(str, Enum):
 
     JOIN = "join"
     KICK = "kick"
-    PIN = "pin"
-    PLAYER_LIST = "player_list"
-    START = "start"
+    LEAVE = "leave"
 
-    QUESTION = "question"
-    ANSWER = "answer"
-    RESULT = "result"
-    END = "end"
+    OTHER_JOIN = "other_join"
+    OTHER_KICK = "other_kick"
+    OTHER_LEAVE = "other_leave"
+
+    SHUT_DOWN = "shut_down"

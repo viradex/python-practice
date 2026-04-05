@@ -3,6 +3,7 @@ import os
 import threading
 
 from server.game_state import GameState
+from server.server_ui import ServerUI
 from common.protocol import send, recv
 from common.messages import MessageType
 
@@ -32,6 +33,13 @@ class GameServer:
         self.state = GameState()
         self.server: socket.socket = None
 
+    def _remove_client(self, client, nickname):
+        client.close()
+        self.clients.remove(client)
+
+        del self.client_names[client]
+        del self.state.players[nickname]
+
     def start(self) -> None:
         """
         Start the server, making it available on the network and listen for incoming requests (such as from clients).
@@ -49,8 +57,7 @@ class GameServer:
         self.running = True
         self.server.settimeout(1.0)
 
-        # TODO should this stay?
-        print(f"Started server, listening on {self.host} on port {self.port}")
+        ServerUI.start_server(self.host, self.port)
 
     def accept_clients(self) -> None:
         """
@@ -60,7 +67,7 @@ class GameServer:
         Handles a `KeyboardInterrupt` by shutting down the server.
         """
 
-        print("\nBasic server command-line interpreter (type 'help' for help)")
+        ServerUI.cli_start("server")
         threading.Thread(target=self.host_input_loop).start()
 
         try:
@@ -90,7 +97,7 @@ class GameServer:
             if not cmd:
                 continue
 
-            self.handle_host_command(cmd)
+            self.handle_server_command(cmd)
 
     def listen(self, client: socket.socket) -> None:
         """
@@ -124,47 +131,26 @@ class GameServer:
         finally:
             client.close()
 
-    def handle_host_command(self, cmd: str):
-        # TODO this all seems very messy, should it be in some sort of subset of CLIUI class?
-        help_messages = {
-            "start": "Start the game",
-            "list": "List all nicknames of players currently on the server",
-            "kick <name>": "Kick the specified player from the server",
-            "stop": "Shut down the server",
-            "help": "Show this menu",
-        }
+    def handle_server_command(self, cmd: str):
+        command, arg = ServerUI.parse_command(cmd)
 
-        if cmd == "help":
-            for help_cmd in help_messages:
-                print(f"{help_cmd} - {help_messages[help_cmd]}")
+        if command == "help":
+            ServerUI.show_help()
 
-            print()
-
-        elif cmd == "start":
-            print("Starting game...")
+        elif command == "start":
             self.run_game()
 
-        elif cmd == "list":
-            if len(self.state.players) == 0:
-                print("No players are currently connected")
-            else:
-                print("\nPlayers")
-                for name in self.state.players:
-                    print(f"- {name}")
+        elif command == "list":
+            ServerUI.show_players(self.state.players)
 
-            print()
+        elif command == "kick":
+            self.kick_player(arg, "You were kicked by the host")
 
-        elif cmd.startswith("kick"):
-            name = cmd.split(" ", 1)
-
-            if len(name) > 1:
-                self.kick_player(name[1])
-            else:
-                print("Name must be provided\n")
-
-        elif cmd == "stop":
+        elif command == "stop":
             self.shutdown()
-            return
+
+        elif command == "error":
+            print(arg + "\n")
 
         else:
             print("Invalid command. Type 'help' for available commands\n")
@@ -182,6 +168,8 @@ class GameServer:
 
         if msg_type == MessageType.JOIN:
             self.handle_join(client, msg)
+        elif msg_type == MessageType.LEAVE:
+            self.handle_leave(client, msg)
 
     def handle_join(self, client: socket.socket, msg: dict[str, str]) -> None:
         """
@@ -195,17 +183,50 @@ class GameServer:
             msg (dict): A dictionary containing the data that the client sent.
         """
         nickname = msg["nickname"]
+
+        if nickname in self.client_names.values():
+            print(f"A player with the name {nickname} already exists\n")
+
+            # Send KICK message to the new client only
+            try:
+                send(
+                    client,
+                    {
+                        "type": MessageType.KICK,
+                        "reason": "A player with the same name is already on the server!",
+                    },
+                )
+                client.shutdown(socket.SHUT_RDWR)  # Flush the message
+            except OSError:
+                pass
+            finally:
+                client.close()
+
+            # Remove the new client from the list if added
+            if client in self.clients:
+                self.clients.remove(client)
+
+            return
+
         self.client_names[client] = nickname
 
         self.state.add_player(nickname)
-        print(f"{nickname} joined the game\n")
+        ServerUI.player_joined(nickname)
 
         self.broadcast(
             {
-                "type": MessageType.PLAYER_LIST,
-                "players": list(self.state.players.keys()),
+                "type": MessageType.OTHER_JOIN,
+                "nickname": nickname,
             }
         )
+
+    def handle_leave(self, client, msg):
+        name = msg["nickname"]
+
+        ServerUI.player_left(name)
+        self.broadcast({"type": MessageType.OTHER_LEAVE, "nickname": name})
+
+        self._remove_client(client, name)
 
     def broadcast(self, msg: dict) -> None:
         """
@@ -230,28 +251,26 @@ class GameServer:
     def calculate_scores(self):
         pass
 
-    def kick_player(self, name: str):
+    def kick_player(self, name: str, reason: str):
         for client, n in list(self.client_names.items()):
             if n == name:
-                print(f"Player {name} was kicked from the server\n")
+                ServerUI.player_kicked(name)
 
+                self.broadcast({"type": MessageType.OTHER_KICK, "nickname": name})
                 send(
                     client,
-                    {"type": MessageType.KICK, "reason": "You were kicked by the host"},
+                    {"type": MessageType.KICK, "reason": reason},
                 )
 
-                client.close()
-                self.clients.remove(client)
-
-                del self.client_names[client]
-                del self.state.players[name]
-
+                self._remove_client(client, name)
                 return
 
         print(f"The player {name} does not exist\n")
 
     def shutdown(self) -> None:
         """Shut down the server and disconnect any and all clients currently connected to the server."""
+        self.broadcast({"type": MessageType.SHUT_DOWN, "reason": "Server closed"})
+
         self.running = False
 
         for client in self.clients:
@@ -266,5 +285,5 @@ class GameServer:
             except OSError:
                 pass
 
-        print("Server has been shut down\n")
+        ServerUI.server_shutdown()
         os._exit(0)

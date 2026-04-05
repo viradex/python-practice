@@ -22,11 +22,10 @@ def host_game() -> None:
 def join_game() -> None:
     """Start the program as a client to join a server."""
 
-    # TODO nickname prompt should be in CLIUI class
-    nickname = input("Enter nickname: ")
-    client = GameClient(CLIENT_IP, PORT, nickname)
+    client = GameClient(CLIENT_IP, PORT)
 
     # TODO in GameClient init?
+    client.get_nickname()
     client.connect()
 
 

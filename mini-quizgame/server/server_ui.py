@@ -2,21 +2,24 @@ from common.common_ui import CommonUI
 
 
 class ServerUI(CommonUI):
+    """Class for managing server UI elements."""
+
     @staticmethod
-    def start_server(host, port, ip):
+    def start_server(host: str, port: str | int, ip: str) -> None:
         print(f"\nStarted server, listening on {host} on port {port}")
         print(f"Clients can join by connecting to: {ip}\n")
 
     @staticmethod
-    def client_connected(ip, port):
+    def client_connected(ip: str, port: str | int) -> None:
         print(f"Client joined (IP {ip}:{port})")
 
     @staticmethod
-    def server_shutdown():
+    def server_shutdown() -> None:
         print("Server has been shut down\n")
 
     @staticmethod
-    def parse_command(cmd):
+    def parse_command(cmd) -> tuple[str, str | None]:
+        """Parse a full command entered by the user into the actual command and arguments, if any."""
         parts = cmd.split()
         command = parts[0]
 
@@ -41,7 +44,7 @@ class ServerUI(CommonUI):
             return ("invalid", None)
 
     @staticmethod
-    def show_help():
+    def show_help() -> None:
         help_messages = {
             "start": "Start the game",
             "list": "List all nicknames of players currently on the server",

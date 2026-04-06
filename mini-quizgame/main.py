@@ -2,7 +2,6 @@ from server.game_server import GameServer
 from client.game_client import GameClient
 from utils.json_loader import JSONLoader
 
-# TODO maybe temporary consts?
 SERVER_IP = "0.0.0.0"
 PORT = 5555
 

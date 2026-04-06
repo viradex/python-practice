@@ -35,17 +35,12 @@ class GameServer:
 
         self.clients: list[socket.socket] = []
         self.client_names: dict[socket.socket, str] = {}
+        self.active_players: set[str] = set()
         self.state = GameState()
         self.server: socket.socket = None
 
-    def _remove_client(self, client, nickname):
-        client.close()
-        self.clients.remove(client)
-
-        del self.client_names[client]
-        del self.state.players[nickname]
-
-    def _get_ip_address(self):
+    def _get_ip_address(self) -> str:
+        """Get local IP address of the machine the server is running on."""
         hostname = socket.gethostname()
         return socket.gethostbyname(hostname)
 
@@ -60,7 +55,18 @@ class GameServer:
         # TCP over UDP, for reliability
         # Latency is not as important
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.bind((self.host, self.port))
+
+        try:
+            self.server.bind((self.host, self.port))
+        except OSError as e:
+            if e.errno == 10048:  # address in use
+                print(
+                    f"The port {self.port} is currently in use. Is another instance of the server currently running?\n"
+                )
+                sys.exit(1)
+            else:
+                raise
+
         self.server.listen()
 
         self.running = True
@@ -72,6 +78,8 @@ class GameServer:
         """
         Starts waiting for incoming connections from clients, once the server has been created and started using `start()`.
         Once a client connects, the server listens for any messages from that client and handles them accordingly.
+
+        This method also starts the server CLI prompt.
 
         Handles a `KeyboardInterrupt` by shutting down the server.
         """
@@ -95,7 +103,8 @@ class GameServer:
         except KeyboardInterrupt:
             self.shutdown()
 
-    def host_input_loop(self):
+    def host_input_loop(self) -> None:
+        """Run the server CLI prompt."""
         while self.running:
             try:
                 cmd = input("> ").strip()
@@ -139,9 +148,17 @@ class GameServer:
         finally:
             client.close()
 
-    def handle_server_command(self, cmd: str):
+    def handle_server_command(self, cmd: str) -> None:
+        """
+        Parse and evaluate a command entered into the server CLI, calling the respective function
+        for the specified command.
+
+        Parameters:
+            cmd (str): The full command entered, including arguments.
+        """
         command, arg = ServerUI.parse_command(cmd)
 
+        # TODO aliases?
         if command == "help":
             ServerUI.show_help()
 
@@ -162,6 +179,7 @@ class GameServer:
             self.shutdown()
 
         elif command == "error":
+            # Handle errors such as the absense of arguments
             print(arg + "\n")
 
         else:
@@ -186,17 +204,18 @@ class GameServer:
             self.handle_player_list(client, msg)
         elif msg_type == MessageType.ANSWER:
             self.handle_answer(client, msg)
+        else:
+            raise ValueError(
+                f"The message type {msg_type} did not match any expected types"
+            )
 
-    def handle_join(self, client: socket.socket, msg: dict[str, str]) -> None:
+    def handle_join(self, client: socket.socket, msg: dict) -> None:
         """
         Handles a `JOIN` message type.
 
-        Adds the player to the `GameState` and outputs a message to the console.
-        Also broadcasts a message to all clients about the updated player list.
-
-        Parameters:
-            client (socket): The client that sent the message.
-            msg (dict): A dictionary containing the data that the client sent.
+        Runs checks on if the server is full or the nickname is taken, and if so,
+        kicks the user. Otherwise, adds it to the server's internal database to be
+        tracked, and broadcasts the join to all users.
         """
         nickname = msg["nickname"]
 
@@ -236,15 +255,28 @@ class GameServer:
             }
         )
 
-    def handle_leave(self, client, msg):
+    def handle_leave(self, client: socket.socket, msg: dict) -> None:
+        """
+        Handles a `LEAVE` message type.
+
+        Removes the client from the server's internal database, and broadcasts
+        it to all clients.
+        """
         name = msg["nickname"]
 
         ServerUI.player_left(name)
         self.broadcast({"type": MessageType.OTHER_LEAVE, "nickname": name})
 
-        self._remove_client(client, name)
+        self.remove_client(client, name)
 
-    def handle_player_list(self, client, msg):
+    def handle_player_list(self, client: socket.socket, msg: dict) -> None:
+        """
+        Handles a `PLAYER_LIST` message type.
+
+        When the client runs the `list` command, it requires the server to provide
+        the player list. This method sends it back to the client with the same
+        message type of `PLAYER_LIST`.
+        """
         send(
             client,
             {
@@ -253,18 +285,28 @@ class GameServer:
             },
         )
 
-    def handle_answer(self, client, msg):
+    def handle_answer(self, client: socket.socket, msg: dict) -> None:
+        """
+        Handles an `ANSWER` message type.
+
+        This method only runs if the game is currently active, and only accepts inputs
+        from currently active players. Submits the answer, and, if all users have answered,
+        notifies the event.
+        """
         if not self.in_game:
             return
 
+        # If the player joined after the game started, ignore their responses
         name = self.client_names[client]
-        answer = msg["answer"]
+        if name not in self.active_players:
+            return
 
+        answer = msg["answer"]
         self.state.submit_answer(name, answer)
 
-        print(f"{name} answered ({len(self.state.answers)}/{len(self.state.players)})")
+        print(f"{name} answered ({len(self.state.answers)}/{len(self.active_players)})")
 
-        if self.state.all_answered():
+        if self.state.all_answered(self.active_players):
             self.answers_event.set()
 
     def broadcast(self, msg: dict) -> None:
@@ -278,7 +320,12 @@ class GameServer:
         for client in self.clients:
             send(client, msg)
 
-    def run_game(self):
+    def run_game(self) -> None:
+        """Run the quiz game. Ensures there are enough players, then notifies all players and starts giving questions. Once done, the method gives the scores and ends the game."""
+        if len(self.state.players) < 2:
+            print("Too few players to start the game\n")
+            return
+
         print("Starting game...\n")
         self.in_game = True
 
@@ -287,6 +334,9 @@ class GameServer:
                 "type": MessageType.STARTING,
             }
         )
+
+        # Only players that have joined are in the game
+        self.active_players = set(self.state.players.keys())
 
         for i, question in enumerate(self.questions):
             self.state.current_question = question
@@ -300,7 +350,11 @@ class GameServer:
 
             correct_index = self.state.current_question["answer_index"]
 
+            # Inform users if their answer was correct or not
             for client, name in self.client_names.items():
+                if name not in self.active_players:
+                    continue
+
                 player_answer = self.state.answers.get(name)
                 result = "correct" if player_answer == correct_index else "wrong"
 
@@ -315,7 +369,8 @@ class GameServer:
 
         self.end_game()
 
-    def ask_question(self, num, question):
+    def ask_question(self, num: int, question: dict[str, str | list[str]]) -> None:
+        """Shows the question and broadcast the question to all clients."""
         self.current_question = question
         ServerUI.show_question(num, question["question"], question["choices"])
 
@@ -328,13 +383,23 @@ class GameServer:
             }
         )
 
-    def end_game(self):
+    def end_game(self) -> None:
+        """Stop the game, showing scores and informing clients of everyone's scores."""
         self.in_game = False
 
         ServerUI.show_scores(self.state.players)
         self.broadcast({"type": MessageType.GAME_OVER, "scores": self.state.players})
 
-    def kick_player(self, name: str, reason: str):
+    def kick_player(self, name: str, reason: str) -> None:
+        """
+        Kick a player from the server for a specified reason. Forcefully removes them and
+        ends their session, and removes them from the server's internal client database.
+
+        Parameters:
+            name: The nickname of the user.
+            reason: The reason for the user's kick.
+        """
+
         for client, n in list(self.client_names.items()):
             if n == name:
                 ServerUI.player_kicked(name)
@@ -345,10 +410,25 @@ class GameServer:
                     {"type": MessageType.KICK, "reason": reason},
                 )
 
-                self._remove_client(client, name)
+                self.remove_client(client, name)
                 return
 
         print(f"The player {name} does not exist\n")
+
+    def remove_client(self, client: socket.socket, nickname: str) -> None:
+        """Remove the specified client from the server, and end their session. Requires both their socket and nickname to remove."""
+        client.close()
+        self.clients.remove(client)
+
+        del self.client_names[client]
+        del self.state.players[nickname]
+
+        if self.in_game and nickname in self.active_players:
+            self.active_players.remove(nickname)
+
+            # If they haven't answered yet, check if others have to prevent hanging
+            if self.state.all_answered(self.active_players):
+                self.answers_event.set()
 
     def shutdown(self) -> None:
         """Shut down the server and disconnect any and all clients currently connected to the server."""

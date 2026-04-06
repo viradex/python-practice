@@ -3,12 +3,14 @@ from common.common_ui import CommonUI
 
 
 class ClientUI(CommonUI):
+    """Class for managing client UI elements."""
+
     @staticmethod
-    def join_server(host, port):
+    def join_server(host: str, port: str | int) -> None:
         print(f"Joined server on {host} on port {port}\n")
 
     @staticmethod
-    def get_ip_address(default="127.0.0.1"):
+    def get_ip_address(default: str = "127.0.0.1") -> str:
         while True:
             ip = input(f"Enter IP address (or blank for {default}): ")
 
@@ -22,7 +24,7 @@ class ClientUI(CommonUI):
                 print("Invalid address\n")
 
     @staticmethod
-    def get_nickname():
+    def get_nickname() -> str:
         while True:
             nickname = input("Enter nickname: ").strip()
 
@@ -34,14 +36,15 @@ class ClientUI(CommonUI):
         return nickname
 
     @staticmethod
-    def connection_lost(reason):
+    def connection_lost(reason: str) -> None:
         if not reason:
             reason = "<no reason provided>"
 
-        print(f"Connection Lost\nReason: {reason}")
+        print(f"Connection Lost\nReason: {reason}\n")
 
     @staticmethod
-    def parse_command(cmd):
+    def parse_command(cmd: str) -> tuple[str, str | None]:
+        """Parse a full command entered by the user into the actual command and arguments, if any."""
         parts = cmd.split()
         command = parts[0]
 
@@ -63,7 +66,7 @@ class ClientUI(CommonUI):
             return ("invalid", None)
 
     @staticmethod
-    def show_help():
+    def show_help() -> None:
         help_messages = {
             "list": "List all nicknames of players currently on the server",
             "answer <letter>": "When in the game, give your answer to the question",

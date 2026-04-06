@@ -51,6 +51,11 @@ class ClientUI(CommonUI):
         elif command == "list":
             return ("list", None)
 
+        elif command == "answer":
+            if len(parts) < 2:
+                return ("error", "Answer must be provided")
+            return ("answer", parts[1])
+
         elif command == "quit":
             return ("quit", None)
 
@@ -61,6 +66,7 @@ class ClientUI(CommonUI):
     def show_help():
         help_messages = {
             "list": "List all nicknames of players currently on the server",
+            "answer <letter>": "When in the game, give your answer to the question",
             "quit": "Disconnect from the server",
             "help": "Show this menu",
         }

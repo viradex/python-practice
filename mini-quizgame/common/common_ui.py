@@ -31,3 +31,27 @@ class CommonUI:
                 print(f"- {name}")
 
         print()
+
+    @staticmethod
+    def show_scores(scores):
+        print("\nFinal scores:")
+        sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+        for name, score in sorted_scores:
+            print(f"{name}: {score}")
+
+        print()
+
+    @staticmethod
+    def show_question(num, question, choices):
+        whitespace = " " * (len(str(num)) + 2)
+        letters = ["a", "b", "c", "d"]
+
+        if len(choices) > 4:
+            raise ValueError("Too many choices, max 4")
+
+        print(f"\n{num}) {question}")
+        for i, choice in enumerate(choices):
+            print(f"{whitespace}{letters[i]}. {choice}")
+
+        print()

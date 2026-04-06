@@ -15,6 +15,8 @@ class GameClient:
         self.nickname = None
         self.client = None
 
+        self.in_game = False
+        self.answered = False
         self.awaiting_player_list = False
 
     def get_ip_address(self):
@@ -76,6 +78,9 @@ class GameClient:
         elif command == "list":
             self.ask_player_list()
 
+        elif command == "answer":
+            self.send_answer(arg)
+
         elif command == "quit":
             self.leave_server()
 
@@ -100,6 +105,14 @@ class GameClient:
             self.handle_player_list(msg)
         elif msg_type == MessageType.SHUT_DOWN:
             self.handle_shut_down(msg)
+        elif msg_type == MessageType.STARTING:
+            self.handle_starting(msg)
+        elif msg_type == MessageType.QUESTION:
+            self.handle_question(msg)
+        elif msg_type == MessageType.ANSWER_RESULT:
+            self.handle_answer_result(msg)
+        elif msg_type == MessageType.GAME_OVER:
+            self.handle_game_over(msg)
 
     def handle_other_join(self, msg):
         ClientUI.player_joined(msg["nickname"])
@@ -123,15 +136,56 @@ class GameClient:
     def handle_shut_down(self, msg):
         ClientUI.connection_lost(msg["reason"])
 
+    def handle_starting(self, msg):
+        print("Starting game...\n")
+        self.in_game = True
+
+    def handle_question(self, msg):
+        if self.in_game:
+            self.answered = False
+            ClientUI.show_question(msg["number"], msg["question"], msg["choices"])
+
+    def handle_answer_result(self, msg):
+        if msg["result"] == "correct":
+            print("You got it right!\n")
+        else:
+            letters = ("A", "B", "C", "D")
+            print(f"Wrong! The correct answer was {letters[msg["correct_index"]]}\n")
+
+    def handle_game_over(self, msg):
+        self.in_game = False
+        ClientUI.show_scores(msg["scores"])
+
+    def send_answer(self, answer):
+        if not self.in_game:
+            print("This command can only be run once the game has started\n")
+            return
+
+        elif self.answered:
+            print("You already answered\n")
+            return
+
+        valid_answers = ["a", "b", "c", "d"]
+        answer = answer.lower().strip()
+
+        if answer not in valid_answers:
+            print("Invalid answer\n")
+            return
+
+        send(
+            self.client,
+            {"type": MessageType.ANSWER, "answer": valid_answers.index(answer)},
+        )
+        self.answered = True
+
+        print("Answered!\n")
+
     def ask_player_list(self):
         self.awaiting_player_list = True
         send(self.client, {"type": MessageType.PLAYER_LIST})
 
     def send_join(self):
         send(self.client, {"type": MessageType.JOIN, "nickname": self.nickname})
-
-    def send_answer(self, index):
-        pass
 
     def leave_server(self):
         send(self.client, {"type": MessageType.LEAVE, "nickname": self.nickname})

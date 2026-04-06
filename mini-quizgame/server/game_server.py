@@ -27,7 +27,12 @@ class GameServer:
         self.port = port
         self.questions = questions
 
+        self.max_clients = 8
         self.running = False
+
+        self.in_game = False
+        self.answers_event = threading.Event()
+
         self.clients: list[socket.socket] = []
         self.client_names: dict[socket.socket, str] = {}
         self.state = GameState()
@@ -84,7 +89,6 @@ class GameServer:
                     break
 
                 client.settimeout(1.0)
-                self.clients.append(client)
 
                 print(f"Client joined (IP {addr[0]}:{addr[1]})")
                 threading.Thread(target=self.listen, args=(client,)).start()
@@ -142,7 +146,11 @@ class GameServer:
             ServerUI.show_help()
 
         elif command == "start":
-            self.run_game()
+            if self.in_game:
+                print("Game already running\n")
+                return
+
+            threading.Thread(target=self.run_game, daemon=True).start()
 
         elif command == "list":
             ServerUI.show_players(self.state.players)
@@ -176,6 +184,8 @@ class GameServer:
             self.handle_leave(client, msg)
         elif msg_type == MessageType.PLAYER_LIST:
             self.handle_player_list(client, msg)
+        elif msg_type == MessageType.ANSWER:
+            self.handle_answer(client, msg)
 
     def handle_join(self, client: socket.socket, msg: dict[str, str]) -> None:
         """
@@ -190,35 +200,35 @@ class GameServer:
         """
         nickname = msg["nickname"]
 
-        if nickname in self.client_names.values():
-            print(f"A player with the name {nickname} already exists\n")
+        if len(self.client_names) >= self.max_clients:
+            print(f"Player {nickname} cannot connect (server full)\n")
+            send(client, {"type": MessageType.KICK, "reason": "Server is full"})
+            client.close()
 
-            # Send KICK message to the new client only
-            try:
-                send(
-                    client,
-                    {
-                        "type": MessageType.KICK,
-                        "reason": "A player with the same name is already on the server!",
-                    },
-                )
-                client.shutdown(socket.SHUT_RDWR)  # Flush the message
-            except OSError:
-                pass
-            finally:
-                client.close()
-
-            # Remove the new client from the list if added
             if client in self.clients:
                 self.clients.remove(client)
+            return
 
+        if nickname in self.client_names.values():
+            print(f"A player with the name {nickname} already exists\n")
+            send(
+                client,
+                {
+                    "type": MessageType.KICK,
+                    "reason": "A player with the same name is already on the server!",
+                },
+            )
+            client.close()
+
+            if client in self.clients:
+                self.clients.remove(client)
             return
 
         self.client_names[client] = nickname
-
+        self.clients.append(client)
         self.state.add_player(nickname)
-        ServerUI.player_joined(nickname)
 
+        ServerUI.player_joined(nickname)
         self.broadcast(
             {
                 "type": MessageType.OTHER_JOIN,
@@ -243,6 +253,20 @@ class GameServer:
             },
         )
 
+    def handle_answer(self, client, msg):
+        if not self.in_game:
+            return
+
+        name = self.client_names[client]
+        answer = msg["answer"]
+
+        self.state.submit_answer(name, answer)
+
+        print(f"{name} answered ({len(self.state.answers)}/{len(self.state.players)})")
+
+        if self.state.all_answered():
+            self.answers_event.set()
+
     def broadcast(self, msg: dict) -> None:
         """
         Send a message to all clients that are currently connected to the server.
@@ -255,16 +279,60 @@ class GameServer:
             send(client, msg)
 
     def run_game(self):
-        pass
+        print("Starting game...\n")
+        self.in_game = True
 
-    def ask_question(self, question):
-        pass
+        self.broadcast(
+            {
+                "type": MessageType.STARTING,
+            }
+        )
 
-    def collect_answers(self):
-        pass
+        for i, question in enumerate(self.questions):
+            self.state.current_question = question
+            self.state.clear_answers()
 
-    def calculate_scores(self):
-        pass
+            self.ask_question(i + 1, question)
+
+            self.answers_event.clear()
+            self.answers_event.wait()
+            self.state.calculate_scores()
+
+            correct_index = self.state.current_question["answer_index"]
+
+            for client, name in self.client_names.items():
+                player_answer = self.state.answers.get(name)
+                result = "correct" if player_answer == correct_index else "wrong"
+
+                send(
+                    client,
+                    {
+                        "type": MessageType.ANSWER_RESULT,
+                        "result": result,
+                        "correct_index": correct_index,
+                    },
+                )
+
+        self.end_game()
+
+    def ask_question(self, num, question):
+        self.current_question = question
+        ServerUI.show_question(num, question["question"], question["choices"])
+
+        self.broadcast(
+            {
+                "type": MessageType.QUESTION,
+                "number": num,
+                "question": question["question"],
+                "choices": question["choices"],
+            }
+        )
+
+    def end_game(self):
+        self.in_game = False
+
+        ServerUI.show_scores(self.state.players)
+        self.broadcast({"type": MessageType.GAME_OVER, "scores": self.state.players})
 
     def kick_player(self, name: str, reason: str):
         for client, n in list(self.client_names.items()):

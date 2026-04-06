@@ -14,3 +14,9 @@ class MessageType(str, Enum):
 
     PLAYER_LIST = "player_list"
     SHUT_DOWN = "shut_down"
+
+    STARTING = "starting"
+    QUESTION = "question"
+    ANSWER = "answer"
+    ANSWER_RESULT = "answer_result"
+    GAME_OVER = "game_over"
